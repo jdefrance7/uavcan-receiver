@@ -1,40 +1,45 @@
-//------------------------------------------------------------------------------
+//##############################################################################
 // File Information
+//##############################################################################
 
 bool node_status_received = false;
 bool node_status_processed = false;
 bool angular_command_received = false;
 bool angular_command_processed = false;
 
-//------------------------------------------------------------------------------
+//##############################################################################
 // Arduino Support Library
+//##############################################################################
 
 #include <Arduino.h>
 
-//------------------------------------------------------------------------------
+//##############################################################################
 // UAVCAN Driver and Data Types
+//##############################################################################
 
 #include <ast-uavcan.h>
 
-//------------------------------------------------------------------------------
+//##############################################################################
 // UAVCAN Driver Instance
+//##############################################################################
 
 UAVCAN_Driver uavcan;
 
-//------------------------------------------------------------------------------
+//##############################################################################
 // Canard Callback - On Transfer Received
+//##############################################################################
 
 static void onTransferReceived(
   CanardInstance* ins,
   CanardRxTransfer* transfer)
-{ 
+{
   if(transfer->transfer_type == CanardTransferTypeResponse)
   {
     // Add response handlers here...
   }
   else if(transfer->transfer_type == CanardTransferTypeRequest)
   {
-    // Add request handlers here...     
+    // Add request handlers here...
   }
   else if(transfer->transfer_type == CanardTransferTypeBroadcast)
   {
@@ -42,11 +47,11 @@ static void onTransferReceived(
     if(transfer->data_type_id == NODE_STATUS_DATA_TYPE_ID)
     {
       node_status_processed = true;
-      
+
       NodeStatus node_status;
-      
+
       uint32_t bit_offset = 0;
-      
+
       canardDecodeScalar(transfer, bit_offset, 32, false, &node_status.uptime_sec);
       bit_offset += 32;
       canardDecodeScalar(transfer, bit_offset, 2, false, &node_status.health);
@@ -64,7 +69,7 @@ static void onTransferReceived(
       Serial.print("  mode: ");           Serial.println(node_status.mode);
       Serial.print("  sub_mode: ");       Serial.println(node_status.sub_mode);
       Serial.print("  vendor: ");         Serial.println(node_status.vendor_specific_status_code);
-      
+
       canardReleaseRxTransferPayload(ins, transfer);
       return;
     }
@@ -72,9 +77,9 @@ static void onTransferReceived(
     if(transfer->data_type_id == ANGULAR_COMMAND_DATA_TYPE_ID)
     {
       angular_command_processed = true;
-      
+
       uint16_t quaternion_xyzw[4];
-      
+
       AngularCommand angular_command;
 
       uint32_t bit_offset = 0;
@@ -110,8 +115,9 @@ static void onTransferReceived(
   }
 }
 
-//------------------------------------------------------------------------------
+//##############################################################################
 // Canard Callback - Should Accept Transfer
+//##############################################################################
 
 static bool shouldAcceptTransfer(
   const CanardInstance* ins,
@@ -128,22 +134,22 @@ static bool shouldAcceptTransfer(
   }
   else if(transfer_type == CanardTransferTypeRequest)
   {
-    // Add request handlers here...     
+    // Add request handlers here...
   }
   else if(transfer_type == CanardTransferTypeBroadcast)
   {
     if(data_type_id == NODE_STATUS_DATA_TYPE_ID)
     {
       node_status_received = true;
-      
+
       *out_data_type_signature = NODE_STATUS_DATA_TYPE_SIGNATURE;
       return true;
     }
-    
+
     if(data_type_id == ANGULAR_COMMAND_DATA_TYPE_ID)
     {
       angular_command_received = true;
-      
+
       *out_data_type_signature = ANGULAR_COMMAND_DATA_TYPE_SIGNATURE;
       return true;
     }
@@ -151,6 +157,10 @@ static bool shouldAcceptTransfer(
 
   return false;
 }
+
+//##############################################################################
+// Setup Function
+//##############################################################################
 
 void setup()
 {
@@ -165,12 +175,16 @@ void setup()
   Serial.println("Initialization Complete!");
 }
 
+//##############################################################################
+// Main Loop
+//##############################################################################
+
 void loop()
 {
   static int poll;
 
   poll = uavcan.poll();
-  
+
   Serial.print("Poll: "); Serial.println(poll);
   Serial.print("Node Status Received: "); Serial.println(node_status_received);
   Serial.print("Node Status Processed: "); Serial.println(node_status_processed);
@@ -179,3 +193,7 @@ void loop()
 
   delay(10);
 }
+
+//##############################################################################
+// End of File
+//##############################################################################
